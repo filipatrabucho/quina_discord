@@ -1,3 +1,5 @@
+const MEDALS = ['🥇', '🥈', '🥉'];
+
 export default function RoundResult({ me, roundEnded, lobbyState, emit }) {
   const isHost = me.id === lobbyState.hostId;
 
@@ -28,9 +30,15 @@ export default function RoundResult({ me, roundEnded, lobbyState, emit }) {
 
       <h3>Classificação</h3>
       <ol className="scoreboard">
-        {roundEnded.scoreboard.map((s) => (
-          <li key={s.playerId}>
-            <span>{s.username}</span>
+        {roundEnded.scoreboard.map((s, i) => (
+          <li key={s.playerId} className={i < 3 ? `rank-${i + 1}` : ''}>
+            <span className="rank-medal">{MEDALS[i] ?? `#${i + 1}`}</span>
+            {s.avatar ? (
+              <img className="avatar" src={s.avatar} alt="" />
+            ) : (
+              <span className="avatar avatar-fallback">{(s.username ?? '?').charAt(0).toUpperCase()}</span>
+            )}
+            <span className="score-name">{s.username}</span>
             <span>{s.score} pts</span>
           </li>
         ))}

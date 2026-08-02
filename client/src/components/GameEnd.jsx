@@ -1,3 +1,5 @@
+const MEDALS = ['🥇', '🥈', '🥉'];
+
 export default function GameEnd({ me, gameEnded, lobbyState, emit }) {
   const isHost = me.id === lobbyState.hostId;
   const winner = gameEnded.scoreboard.find((s) => s.playerId === gameEnded.winnerId);
@@ -6,8 +8,9 @@ export default function GameEnd({ me, gameEnded, lobbyState, emit }) {
 
   return (
     <div className="panel centered">
+      <span className="game-end-trophy">🏆</span>
       <h2>Fim do jogo!</h2>
-      {winner && <p className="winner-text">🏆 {winner.username} venceu com {winner.score} pontos!</p>}
+      {winner && <p className="winner-text">{winner.username} venceu com {winner.score} pontos!</p>}
 
       {myResult && (
         <p className="subtitle-text">
@@ -18,8 +21,14 @@ export default function GameEnd({ me, gameEnded, lobbyState, emit }) {
 
       <ol className="scoreboard">
         {gameEnded.scoreboard.map((s, i) => (
-          <li key={s.playerId} className={i === 0 ? 'first-place' : ''}>
-            <span>{s.username}</span>
+          <li key={s.playerId} className={i < 3 ? `rank-${i + 1}` : ''}>
+            <span className="rank-medal">{MEDALS[i] ?? `#${i + 1}`}</span>
+            {s.avatar ? (
+              <img className="avatar" src={s.avatar} alt="" />
+            ) : (
+              <span className="avatar avatar-fallback">{(s.username ?? '?').charAt(0).toUpperCase()}</span>
+            )}
+            <span className="score-name">{s.username}</span>
             <span>{s.score} pts</span>
           </li>
         ))}

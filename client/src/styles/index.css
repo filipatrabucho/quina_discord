@@ -28,6 +28,12 @@ html, body, #root {
   height: 100%;
 }
 
+@supports (height: 100dvh) {
+  html, body, #root {
+    height: 100dvh;
+  }
+}
+
 body {
   margin: 0;
   color: var(--text);
@@ -42,10 +48,11 @@ body {
 
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 14px 40px;
+  padding: 12px 12px 16px;
 }
 
 .app-shell.centered {
@@ -55,18 +62,40 @@ body {
 }
 
 .app-header {
+  position: relative;
   width: 100%;
   max-width: 480px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
+  min-height: 38px;
+  margin-bottom: 12px;
+}
+
+.app-header-side {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+
+.app-header-left {
+  justify-content: flex-start;
+}
+
+.app-header-right {
+  justify-content: flex-end;
 }
 
 .app-header-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   text-align: center;
   line-height: 1.1;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .app-header-title h1 {
@@ -112,10 +141,10 @@ body {
   background: linear-gradient(180deg, var(--panel), color-mix(in srgb, var(--panel) 92%, black));
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-lg);
-  padding: 22px 20px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
@@ -475,25 +504,25 @@ button:disabled {
 .guess-grid {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
 }
 
 .grid-row {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 .tile {
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   border: 2px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   text-transform: uppercase;
   background: rgba(255, 255, 255, 0.02);
 }
@@ -520,30 +549,30 @@ button:disabled {
 .keyboard {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
 }
 
 .keyboard-row {
   display: flex;
-  gap: 4px;
+  gap: 3px;
 }
 
 .key {
-  min-width: 28px;
-  padding: 11px 6px;
+  min-width: 26px;
+  padding: 8px 5px;
   background: var(--panel-alt-2);
   color: var(--text);
   border: none;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
 .key.key-wide {
-  min-width: 52px;
-  font-size: 0.65rem;
+  min-width: 46px;
+  font-size: 0.62rem;
 }
 
 .key.correct {
@@ -563,12 +592,12 @@ button:disabled {
 
 .opponents-panel {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 12px;
-  margin-top: 2px;
+  padding-top: 8px;
+  margin-top: 0;
 }
 
 .opponents-panel h3 {
-  margin-bottom: 8px;
+  margin: 0 0 6px;
 }
 
 .opponents-panel ul {
@@ -577,16 +606,16 @@ button:disabled {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .opponents-panel li {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   background: var(--panel-alt);
-  padding: 6px 10px;
+  padding: 5px 10px;
   border-radius: var(--radius);
 }
 
@@ -647,19 +676,39 @@ button:disabled {
 
 .scoreboard li {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   background: var(--panel-alt);
   padding: 8px 12px;
   border-radius: var(--radius);
   font-size: 0.85rem;
 }
 
-.scoreboard li.first-place {
-  background: linear-gradient(90deg, var(--accent), #7c6ff2);
-  color: white;
-  font-weight: 700;
+.scoreboard .rank-medal {
+  font-weight: 800;
+  font-size: 0.8rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
 }
+
+.scoreboard .score-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scoreboard li.rank-1 {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 30%, var(--panel-alt)), var(--panel-alt));
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+.scoreboard li.rank-1 .rank-medal { color: var(--gold); }
+
+.scoreboard li.rank-2 .rank-medal { color: #c9ccd6; }
+
+.scoreboard li.rank-3 .rank-medal { color: #cd8a4f; }
 
 .points {
   color: var(--success);
@@ -667,7 +716,44 @@ button:disabled {
   white-space: nowrap;
 }
 
+.game-end-trophy {
+  font-size: 2.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px color-mix(in srgb, var(--gold) 50%, transparent));
+}
+
 .winner-text {
   font-size: 1.05rem;
   font-weight: 700;
+}
+
+/* Extra-compact fallback for short embedded viewports (e.g. Discord
+   Activity panels) so gameplay never needs to scroll. */
+@media (max-height: 700px) {
+  .app-shell {
+    padding: 8px 10px 10px;
+  }
+
+  .app-header {
+    margin-bottom: 8px;
+  }
+
+  .panel {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .tile {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+  }
+
+  .key {
+    padding: 6px 4px;
+  }
+
+  .opponents-panel li {
+    padding: 4px 8px;
+  }
 }

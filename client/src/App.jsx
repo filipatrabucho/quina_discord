@@ -147,19 +147,19 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="app-header-left">
-          <ProfileHeader player={myPlayer} emit={emit} />
+        <div className="app-header-side app-header-left">
+          {lobbyState.phase !== 'lobby' && lobbyState.phase !== 'game_end' && (
+            <div className="round-pill">
+              Ronda {Math.min(lobbyState.round, lobbyState.totalRounds)} / {lobbyState.totalRounds}
+            </div>
+          )}
         </div>
         <div className="app-header-title">
           <h1>Quina</h1>
           <span className="subtitle">descobre a palavra</span>
         </div>
-        <div className="app-header-right">
-          {lobbyState.phase !== 'lobby' && (
-            <div className="round-pill">
-              Ronda {lobbyState.round} / {lobbyState.totalRounds}
-            </div>
-          )}
+        <div className="app-header-side app-header-right">
+          <ProfileHeader player={myPlayer} emit={emit} />
         </div>
       </header>
 

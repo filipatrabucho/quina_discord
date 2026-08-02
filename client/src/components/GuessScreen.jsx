@@ -63,7 +63,6 @@ export default function GuessScreen({ me, roundInfo, lobbyState, myGuessState, o
   return (
     <div className="panel">
       <h2>Adivinha a tua palavra</h2>
-      <p className="subtitle-text">Todos estão a jogar em simultâneo — acompanha o progresso deles abaixo.</p>
       <GuessGrid
         attempts={attempts}
         wordLength={wordLength}
