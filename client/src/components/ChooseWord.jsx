@@ -1,9 +1,13 @@
 import { useState } from 'react';
 
-export default function ChooseWord({ roundInfo, emit }) {
+export default function ChooseWord({ me, roundInfo, lobbyState, choosingProgress, emit }) {
   const [word, setWord] = useState('');
   const [error, setError] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+
+  const myAssignment = roundInfo.assignments.find((a) => a.chooserId === me.id);
+  const target = lobbyState.players.find((p) => p.id === myAssignment?.targetId);
+  const totalPlayers = roundInfo.assignments.length;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -20,18 +24,22 @@ export default function ChooseWord({ roundInfo, emit }) {
     return (
       <div className="panel centered">
         <h2>Palavra escolhida!</h2>
-        <p className="subtitle-text">À espera que os outros jogadores adivinhem...</p>
+        <p className="subtitle-text">
+          À espera que os outros jogadores escolham a palavra deles
+          {choosingProgress ? ` (${choosingProgress.submitted}/${choosingProgress.total})` : '...'}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="panel">
-      <h2>É a tua vez de escolher a palavra</h2>
+      <h2>Escolhe uma palavra para {target?.username ?? 'o próximo jogador'}</h2>
       <p className="subtitle-text">
-        Escolhe uma palavra de {roundInfo.wordLength} letras em{' '}
-        {roundInfo.language === 'pt' ? 'português' : 'inglês'}. Os outros jogadores não a
-        vão ver — só o resultado de cada tentativa deles.
+        Uma palavra de {roundInfo.wordLength} letras em{' '}
+        {roundInfo.language === 'pt' ? 'português' : 'inglês'}. {target?.username ?? 'Ele/ela'} não a
+        vai ver, só o resultado de cada tentativa. Todos escolhem ao mesmo tempo
+        {totalPlayers > 2 ? ` (${totalPlayers} jogadores nesta ronda)` : ''}.
       </p>
       <form className="join-form" onSubmit={handleSubmit}>
         <input

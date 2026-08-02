@@ -6,40 +6,8 @@ import OpponentsPanel from './OpponentsPanel.jsx';
 const STATUS_RANK = { absent: 0, present: 1, correct: 2 };
 
 export default function GuessScreen({ me, roundInfo, lobbyState, myGuessState, opponents, emit }) {
-  const isChooser = me.id === roundInfo.chooserId;
   const wordLength = lobbyState.wordLength;
   const maxAttempts = lobbyState.maxAttempts;
-
-  if (isChooser) {
-    return (
-      <div className="panel">
-        <h2>Palavra em jogo!</h2>
-        <p className="subtitle-text">Os outros jogadores estão a tentar adivinhar a tua palavra.</p>
-        <OpponentsPanel
-          players={lobbyState.players}
-          opponents={opponents}
-          maxAttempts={maxAttempts}
-          excludeIds={[me.id]}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <GuesserView
-      me={me}
-      lobbyState={lobbyState}
-      roundInfo={roundInfo}
-      myGuessState={myGuessState}
-      opponents={opponents}
-      wordLength={wordLength}
-      maxAttempts={maxAttempts}
-      emit={emit}
-    />
-  );
-}
-
-function GuesserView({ me, lobbyState, roundInfo, myGuessState, opponents, wordLength, maxAttempts, emit }) {
   const [currentGuess, setCurrentGuess] = useState('');
   const [error, setError] = useState(null);
   const { attempts, done, won } = myGuessState;
@@ -94,7 +62,8 @@ function GuesserView({ me, lobbyState, roundInfo, myGuessState, opponents, wordL
 
   return (
     <div className="panel">
-      <h2>Adivinha a palavra</h2>
+      <h2>Adivinha a tua palavra</h2>
+      <p className="subtitle-text">Todos estão a jogar em simultâneo — acompanha o progresso deles abaixo.</p>
       <GuessGrid
         attempts={attempts}
         wordLength={wordLength}
@@ -113,7 +82,7 @@ function GuesserView({ me, lobbyState, roundInfo, myGuessState, opponents, wordL
         players={lobbyState.players}
         opponents={opponents}
         maxAttempts={maxAttempts}
-        excludeIds={[me.id, roundInfo.chooserId]}
+        excludeIds={[me.id]}
       />
     </div>
   );

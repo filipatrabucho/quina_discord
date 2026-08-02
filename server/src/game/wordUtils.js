@@ -93,3 +93,8 @@ export function computeFeedback(guess, secret) {
 export function isWinningFeedback(feedback) {
   return feedback.every((f) => f.status === 'correct');
 }
+
+export function getRandomWord(language) {
+  const list = WORD_LISTS[language];
+  return list[Math.floor(Math.random() * list.length)];
+}

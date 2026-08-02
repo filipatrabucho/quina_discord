@@ -1,33 +1,29 @@
 export default function RoundResult({ me, roundEnded, lobbyState, emit }) {
-  const chooser = lobbyState.players.find((p) => p.id === roundEnded.chooserId);
   const isHost = me.id === lobbyState.hostId;
 
   return (
     <div className="panel">
       <h2>Fim da ronda</h2>
-      <p className="subtitle-text">
-        A palavra era <strong>{roundEnded.secretWord.toUpperCase()}</strong>
-        {chooser ? ` (escolhida por ${chooser.username})` : ''}.
-      </p>
 
       <ul className="results-list">
-        {roundEnded.results.map((r) => {
-          const player = lobbyState.players.find((p) => p.id === r.playerId);
-          return (
-            <li key={r.playerId}>
-              <span>{player?.username ?? '???'}</span>
-              <span>{r.won ? `acertou em ${r.attempts} tentativa(s)` : 'não acertou'}</span>
-              <span className="points">+{r.points} pts</span>
-            </li>
-          );
-        })}
-        {roundEnded.chooserBonus > 0 && (
-          <li>
-            <span>{chooser?.username ?? '???'} (bónus por dificultar)</span>
-            <span></span>
-            <span className="points">+{roundEnded.chooserBonus} pts</span>
+        {roundEnded.pairings.map((pr) => (
+          <li key={pr.guesserId} className="pairing-result">
+            <div className="pairing-word">
+              <strong>{pr.secretWord.toUpperCase()}</strong>
+              <span className="subtitle-text"> escolhida por {pr.chooserUsername}</span>
+            </div>
+            <div className="pairing-outcome">
+              <span>{pr.guesserUsername} {pr.won ? `acertou em ${pr.attempts} tentativa(s)` : 'não acertou'}</span>
+              <span className="points">+{pr.guesserPoints} pts</span>
+            </div>
+            {pr.chooserBonus > 0 && (
+              <div className="pairing-outcome">
+                <span>{pr.chooserUsername} dificultou a vida a {pr.guesserUsername}</span>
+                <span className="points">+{pr.chooserBonus} pts</span>
+              </div>
+            )}
           </li>
-        )}
+        ))}
       </ul>
 
       <h3>Classificação</h3>

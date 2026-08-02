@@ -4,19 +4,19 @@ import { isRunningInsideDiscord, setupDiscordSdk } from './discordSdk.js';
 import LocalDevJoin from './components/LocalDevJoin.jsx';
 import Lobby from './components/Lobby.jsx';
 import ChooseWord from './components/ChooseWord.jsx';
-import WaitingForWord from './components/WaitingForWord.jsx';
 import GuessScreen from './components/GuessScreen.jsx';
 import RoundResult from './components/RoundResult.jsx';
 import GameEnd from './components/GameEnd.jsx';
 import ErrorBanner from './components/ErrorBanner.jsx';
+import ProfileHeader from './components/ProfileHeader.jsx';
 
 export default function App() {
   const [status, setStatus] = useState('connecting'); // connecting | needsLocalJoin | joined | error
   const [errorMessage, setErrorMessage] = useState(null);
   const [me, setMe] = useState(null);
-  const [roomId, setRoomId] = useState(null);
   const [lobbyState, setLobbyState] = useState(null);
   const [roundInfo, setRoundInfo] = useState(null);
+  const [choosingProgress, setChoosingProgress] = useState(null);
   const [wordReady, setWordReady] = useState(false);
   const [myGuessState, setMyGuessState] = useState({ attempts: [], done: false, won: false });
   const [opponents, setOpponents] = useState({});
@@ -28,7 +28,6 @@ export default function App() {
 
   const joinRoom = useCallback((user, room) => {
     setMe(user);
-    setRoomId(room);
     const socket = getSocket();
     socketRef.current = socket;
 
@@ -53,12 +52,14 @@ export default function App() {
 
     socket.on('round:started', (event) => {
       setRoundInfo(event);
+      setChoosingProgress(null);
       setWordReady(false);
       setMyGuessState({ attempts: [], done: false, won: false });
       setOpponents({});
       setRoundEnded(null);
     });
 
+    socket.on('round:choosingProgress', (event) => setChoosingProgress(event));
     socket.on('round:wordReady', () => setWordReady(true));
 
     socket.on('guess:result', (result) => {
@@ -141,15 +142,25 @@ export default function App() {
     return <CenteredMessage title="Quina" subtitle="A entrar na sala..." />;
   }
 
+  const myPlayer = lobbyState.players.find((p) => p.id === me.id);
+
   return (
     <div className="app-shell">
       <header className="app-header">
-        <h1>Quina <span className="subtitle">descobre a palavra</span></h1>
-        {lobbyState.phase !== 'lobby' && (
-          <div className="round-pill">
-            Ronda {lobbyState.round} / {lobbyState.totalRounds}
-          </div>
-        )}
+        <div className="app-header-left">
+          <ProfileHeader player={myPlayer} emit={emit} />
+        </div>
+        <div className="app-header-title">
+          <h1>Quina</h1>
+          <span className="subtitle">descobre a palavra</span>
+        </div>
+        <div className="app-header-right">
+          {lobbyState.phase !== 'lobby' && (
+            <div className="round-pill">
+              Ronda {lobbyState.round} / {lobbyState.totalRounds}
+            </div>
+          )}
+        </div>
       </header>
 
       {transientError && <ErrorBanner message={transientError} />}
@@ -160,11 +171,13 @@ export default function App() {
         )}
 
         {lobbyState.phase === 'choosing' && roundInfo && (
-          me.id === roundInfo.chooserId ? (
-            <ChooseWord roundInfo={roundInfo} emit={emit} />
-          ) : (
-            <WaitingForWord roundInfo={roundInfo} lobbyState={lobbyState} />
-          )
+          <ChooseWord
+            me={me}
+            roundInfo={roundInfo}
+            lobbyState={lobbyState}
+            choosingProgress={choosingProgress}
+            emit={emit}
+          />
         )}
 
         {lobbyState.phase === 'guessing' && roundInfo && wordReady && (

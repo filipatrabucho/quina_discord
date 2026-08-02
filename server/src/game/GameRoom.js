@@ -6,24 +6,35 @@ import {
   canonicalize,
   computeFeedback,
   isWinningFeedback,
+  getRandomWord,
 } from './wordUtils.js';
 
 const WIN_POINTS_BY_ATTEMPT = [null, 60, 50, 40, 30, 20, 10]; // index = attempts used (1-6)
 const FIRST_SOLVER_BONUS = 20;
-const CHOOSER_STUMP_BONUS = 15; // per guesser who failed to solve the word
+const CHOOSER_STUMP_BONUS = 15;
+const MIN_ROUNDS = 1;
+const MAX_ROUNDS = 10;
+const DEFAULT_ROUNDS = 3;
 
+/**
+ * Everyone plays every round: each player simultaneously picks a secret word
+ * for one target (a circular assignment that rotates offset each round so
+ * pairings vary), then everyone guesses the word chosen for them at the same
+ * time, watching each other's live progress.
+ */
 export class GameRoom {
   constructor(roomId) {
     this.roomId = roomId;
     this.players = new Map(); // playerId -> { id, username, avatar, connected, score }
     this.hostId = null;
     this.order = [];
-    this.settings = { language: 'pt', roundsPerPlayer: 1 };
+    this.settings = { language: 'pt', roundsCount: DEFAULT_ROUNDS };
     this.phase = 'lobby'; // lobby | choosing | guessing | round_end | game_end
     this.currentRoundIndex = -1;
-    this.currentChooserId = null;
-    this.secretWord = null;
-    this.guesses = new Map(); // playerId -> { attempts: [{guess, feedback}], won, done, wonAt }
+    this.chooserToGuesser = new Map();
+    this.guesserToChooser = new Map();
+    this.words = new Map(); // chooserId -> secret word chosen for their target
+    this.guesses = new Map(); // guesserId -> { attempts, won, done, wonAt }
     this.roundSolveOrderCounter = 0;
   }
 
@@ -42,26 +53,37 @@ export class GameRoom {
     const player = { id, username, avatar, connected: true, score: 0 };
     this.players.set(id, player);
     if (!this.hostId) this.hostId = id;
-    if (this.phase === 'lobby') {
-      this.order.push(id);
-    } else if (!this.order.includes(id)) {
-      // Late joiners are queued in for future rounds, not the one in progress.
-      this.order.push(id);
-    }
+    if (!this.order.includes(id)) this.order.push(id);
     return player;
   }
 
+  // A disconnect can unblock whatever the room was waiting on (e.g. everyone
+  // else had already submitted a word, or already finished guessing). Tells
+  // the caller which transition just happened so it can broadcast it.
   markDisconnected(playerId) {
     const player = this.players.get(playerId);
     if (player) player.connected = false;
+
+    if (this.phase === 'choosing' && this.tryCompleteChoosingPhase()) {
+      return { choosingCompleted: true };
+    }
+    if (this.phase === 'guessing' && this.isRoundComplete()) {
+      return { roundCompleted: true };
+    }
+    return {};
   }
 
   setLanguage(language) {
-    if (!SUPPORTED_LANGUAGES.includes(language)) {
-      throw new Error('invalid_language');
-    }
+    if (!SUPPORTED_LANGUAGES.includes(language)) throw new Error('invalid_language');
     if (this.phase !== 'lobby' && this.phase !== 'game_end') throw new Error('game_in_progress');
     this.settings.language = language;
+  }
+
+  setRoundsCount(count) {
+    const n = Number(count);
+    if (!Number.isInteger(n) || n < MIN_ROUNDS || n > MAX_ROUNDS) throw new Error('invalid_rounds_count');
+    if (this.phase !== 'lobby' && this.phase !== 'game_end') throw new Error('game_in_progress');
+    this.settings.roundsCount = n;
   }
 
   canStart() {
@@ -70,7 +92,7 @@ export class GameRoom {
   }
 
   totalRounds() {
-    return this.order.length * this.settings.roundsPerPlayer;
+    return this.settings.roundsCount;
   }
 
   startGame() {
@@ -88,21 +110,31 @@ export class GameRoom {
     }
 
     this.phase = 'choosing';
-    this.secretWord = null;
+    this.words = new Map();
     this.guesses = new Map();
     this.roundSolveOrderCounter = 0;
-    this.currentChooserId = this.order[this.currentRoundIndex % this.order.length];
 
-    for (const id of this.order) {
-      if (id === this.currentChooserId) continue;
-      this.guesses.set(id, { attempts: [], won: false, done: false, wonAt: null });
+    const n = this.order.length;
+    const offset = n > 1 ? 1 + (this.currentRoundIndex % (n - 1)) : 0;
+    this.chooserToGuesser = new Map();
+    this.guesserToChooser = new Map();
+
+    for (let i = 0; i < n; i++) {
+      const chooserId = this.order[i];
+      const guesserId = this.order[(i + offset) % n];
+      this.chooserToGuesser.set(chooserId, guesserId);
+      this.guesserToChooser.set(guesserId, chooserId);
+      this.guesses.set(guesserId, { attempts: [], won: false, done: false, wonAt: null });
     }
 
     return {
       type: 'round_started',
       round: this.currentRoundIndex + 1,
       totalRounds: this.totalRounds(),
-      chooserId: this.currentChooserId,
+      assignments: [...this.chooserToGuesser.entries()].map(([chooserId, targetId]) => ({
+        chooserId,
+        targetId,
+      })),
       language: this.settings.language,
       wordLength: WORD_LENGTH,
     };
@@ -110,31 +142,46 @@ export class GameRoom {
 
   submitWord(playerId, word) {
     if (this.phase !== 'choosing') throw new Error('not_choosing_phase');
-    if (playerId !== this.currentChooserId) throw new Error('not_your_turn');
+    if (!this.chooserToGuesser.has(playerId)) throw new Error('not_a_chooser');
+    if (this.words.has(playerId)) throw new Error('already_submitted');
     if (!isValidWord(word, this.settings.language)) throw new Error('invalid_word');
 
-    this.secretWord = canonicalize(word, this.settings.language);
-    this.phase = 'guessing';
+    this.words.set(playerId, canonicalize(word, this.settings.language));
+    const allReady = this.tryCompleteChoosingPhase();
 
-    // A round with no guessers (shouldn't normally happen) resolves immediately.
-    if (this.guesses.size === 0) {
-      return this.endRound();
+    return allReady
+      ? { type: 'word_ready', wordLength: WORD_LENGTH }
+      : { type: 'waiting_for_others', submitted: this.words.size, total: this.chooserToGuesser.size };
+  }
+
+  // Fills in a random dictionary word for any chooser who disconnected before
+  // submitting, so the round isn't stuck waiting on someone who left. Once
+  // every chooser has a word (submitted or auto-filled), flips to 'guessing'.
+  tryCompleteChoosingPhase() {
+    if (this.phase !== 'choosing') return this.phase !== 'choosing';
+    for (const chooserId of this.chooserToGuesser.keys()) {
+      if (this.words.has(chooserId)) continue;
+      const chooser = this.players.get(chooserId);
+      if (!chooser?.connected) {
+        this.words.set(chooserId, getRandomWord(this.settings.language));
+      } else {
+        return false;
+      }
     }
-
-    return {
-      type: 'word_ready',
-      wordLength: WORD_LENGTH,
-    };
+    this.phase = 'guessing';
+    return true;
   }
 
   submitGuess(playerId, guess) {
     if (this.phase !== 'guessing') throw new Error('not_guessing_phase');
+    const chooserId = this.guesserToChooser.get(playerId);
+    const secretWord = chooserId && this.words.get(chooserId);
     const state = this.guesses.get(playerId);
-    if (!state) throw new Error('not_a_guesser');
+    if (!state || !secretWord) throw new Error('not_a_guesser');
     if (state.done) throw new Error('already_done');
     if (!isValidWord(guess, this.settings.language)) throw new Error('invalid_word');
 
-    const feedback = computeFeedback(guess, this.secretWord);
+    const feedback = computeFeedback(guess, secretWord);
     const won = isWinningFeedback(feedback);
     state.attempts.push({ guess: canonicalize(guess, this.settings.language), feedback });
     state.won = won;
@@ -161,8 +208,7 @@ export class GameRoom {
       won: state.won,
     };
 
-    const roundComplete = this.isRoundComplete();
-    return { result, progress, roundComplete };
+    return { result, progress, roundComplete: this.isRoundComplete() };
   }
 
   isRoundComplete() {
@@ -175,40 +221,42 @@ export class GameRoom {
 
   endRound() {
     this.phase = 'round_end';
-    const results = [];
-    let failedCount = 0;
+    const pairings = [];
 
-    for (const [playerId, state] of this.guesses) {
-      let points = 0;
+    for (const [chooserId, guesserId] of this.chooserToGuesser) {
+      const state = this.guesses.get(guesserId);
+      const secretWord = this.words.get(chooserId);
+      let guesserPoints = 0;
+
       if (state.won) {
         const attemptsUsed = state.attempts.length;
-        points = WIN_POINTS_BY_ATTEMPT[attemptsUsed] ?? 10;
-        if (state.wonAt === 1) points += FIRST_SOLVER_BONUS;
-      } else {
-        failedCount += 1;
+        guesserPoints = WIN_POINTS_BY_ATTEMPT[attemptsUsed] ?? 10;
+        if (state.wonAt === 1) guesserPoints += FIRST_SOLVER_BONUS;
       }
-      const player = this.players.get(playerId);
-      if (player) player.score += points;
-      results.push({
-        playerId,
+
+      const chooserBonus = state.won ? 0 : CHOOSER_STUMP_BONUS;
+
+      const guesserPlayer = this.players.get(guesserId);
+      const chooserPlayer = this.players.get(chooserId);
+      if (guesserPlayer) guesserPlayer.score += guesserPoints;
+      if (chooserPlayer) chooserPlayer.score += chooserBonus;
+
+      pairings.push({
+        chooserId,
+        chooserUsername: chooserPlayer?.username ?? '???',
+        guesserId,
+        guesserUsername: guesserPlayer?.username ?? '???',
+        secretWord,
         won: state.won,
         attempts: state.attempts.length,
-        points,
+        guesserPoints,
+        chooserBonus,
       });
-    }
-
-    const chooserBonus = failedCount * CHOOSER_STUMP_BONUS;
-    if (chooserBonus > 0) {
-      const chooser = this.players.get(this.currentChooserId);
-      if (chooser) chooser.score += chooserBonus;
     }
 
     return {
       type: 'round_ended',
-      secretWord: this.secretWord,
-      chooserId: this.currentChooserId,
-      chooserBonus,
-      results,
+      pairings,
       scoreboard: this.scoreboard(),
       isFinalRound: this.currentRoundIndex + 1 >= this.totalRounds(),
     };
@@ -237,7 +285,6 @@ export class GameRoom {
       settings: this.settings,
       round: this.currentRoundIndex + 1,
       totalRounds: this.totalRounds(),
-      chooserId: this.currentChooserId,
       wordLength: WORD_LENGTH,
       maxAttempts: MAX_ATTEMPTS,
       scoreboard: this.scoreboard(),

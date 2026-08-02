@@ -1,11 +1,12 @@
 # Quina — descobre a palavra
 
 Um jogo multiplayer estilo Wordle/Termo para jogar dentro de uma chamada de
-grupo do Discord (Discord Activity). Em vez de uma palavra aleatória, **cada
-jogador escolhe, à vez, a palavra secreta de 5 letras** que os restantes
-participantes da call têm de adivinhar. Os pontos acumulam-se ronda a ronda:
-quem adivinha com menos tentativas ganha mais pontos, e quem escolheu a
-palavra ganha um bónus se conseguir "dificultar a vida" aos adversários.
+grupo do Discord (Discord Activity). Em vez de uma palavra aleatória, **todos
+os jogadores escolhem, ao mesmo tempo, uma palavra secreta de 5 letras** para
+o jogador seguinte na roda adivinhar — e depois todos adivinham a sua palavra
+em simultâneo, vendo o progresso uns dos outros ao vivo. Os pontos acumulam-se
+ronda a ronda (com rotação da atribuição de pares a cada ronda), e cada
+jogador tem um perfil com XP e nível que persiste entre partidas.
 
 ## Estrutura do projeto
 
@@ -22,18 +23,25 @@ sítio para teres a Activity completa.
 ## Como o jogo funciona
 
 1. Os jogadores da call abrem a Activity e entram na sala de espera (lobby).
-2. O anfitrião (primeiro a entrar) escolhe o idioma (PT/EN) e começa o jogo.
-3. Em cada ronda, um jogador diferente (à vez) escolhe uma palavra secreta de
-   5 letras válida no dicionário. Os restantes jogadores tentam adivinhá-la
-   simultaneamente, com até 6 tentativas cada, com feedback letra-a-letra
-   (verde = letra certa no sítio certo, amarelo = letra existe noutro sítio,
-   cinzento = letra não existe), tal como no Wordle/Termo.
+2. O anfitrião (primeiro a entrar) escolhe o idioma (PT/EN) e o número de
+   rondas, e começa o jogo.
+3. Em cada ronda, cada jogador é emparelhado em "roda" com outro (A escolhe
+   para B, B escolhe para C, ..., o último escolhe para o primeiro) — essa
+   atribuição roda a cada ronda para variar os pares. **Todos escolhem a sua
+   palavra ao mesmo tempo** (5 letras, válida no dicionário), e assim que
+   todos submeterem, **todos adivinham em simultâneo** a palavra que lhes foi
+   escolhida, com até 6 tentativas cada, vendo o progresso (não as letras) dos
+   outros jogadores ao vivo. Feedback letra-a-letra (verde = letra certa no
+   sítio certo, amarelo = letra existe noutro sítio, cinzento = letra não
+   existe), tal como no Wordle/Termo.
 4. Pontuação por ronda: quem acerta ganha mais pontos quanto menos tentativas
    usar (60/50/40/30/20/10 pts), e quem acerta primeiro tem um bónus de +20.
-   Quem escolheu a palavra ganha +15 pontos por cada adversário que não
-   conseguiu adivinhar.
-5. Ao fim de todos os jogadores terem escolhido uma vez, o jogo termina e
-   mostra a classificação final.
+   Quem escolheu uma palavra que o adversário não conseguiu adivinhar ganha
+   +15 pontos de bónus.
+5. Ao fim do número de rondas configurado, o jogo termina, mostra a
+   classificação final e atribui XP permanente a cada jogador (a pontuação da
+   partida soma-se ao XP acumulado do seu perfil, com nível e uma
+   classificação global acessível pelo avatar no topo do ecrã).
 
 ## Pré-requisitos
 
@@ -139,8 +147,12 @@ Activity está pronta a usar-se em qualquer chamada de grupo do Discord.
   `server/src/game/wordUtils.js`), para não obrigar os jogadores a escrever
   acentos em teclados/mobile — a palavra revelada no fim da ronda mantém a
   ortografia correta.
-- O estado do jogo vive em memória no processo do servidor (`GameRoom` /
-  `RoomManager`), por sala (`roomId` = `instanceId` da Activity do Discord).
-  Reiniciar o servidor perde as partidas em curso — não há persistência em
-  base de dados, o que é adequado para partidas casuais de uma sessão de
-  chamada.
+- O estado de cada partida em curso vive em memória no processo do servidor
+  (`GameRoom` / `RoomManager`), por sala (`roomId` = `instanceId` da Activity
+  do Discord). Reiniciar o servidor perde as partidas em curso, mas não afeta
+  o XP dos jogadores (ver ponto seguinte).
+- O XP/nível de cada jogador é persistido em `server/src/data/players.json`
+  (`server/src/persistence/playerStore.js`), indexado pelo id de Discord do
+  jogador. Este ficheiro é criado automaticamente e está no `.gitignore` — não
+  precisas de configurar nenhuma base de dados externa. Para reiniciar todo o
+  histórico de XP, basta apagar esse ficheiro.

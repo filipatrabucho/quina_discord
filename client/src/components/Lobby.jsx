@@ -30,6 +30,18 @@ export default function Lobby({ me, lobbyState, emit }) {
             </select>
           </label>
 
+          <label>
+            Número de rondas
+            <select
+              value={lobbyState.settings.roundsCount}
+              onChange={(e) => emit('lobby:setRoundsCount', { roundsCount: Number(e.target.value) })}
+            >
+              {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </label>
+
           <button disabled={!canStart} onClick={() => emit('game:start')}>
             {canStart ? 'Começar jogo' : 'À espera de mais jogadores (mín. 2)'}
           </button>
@@ -39,10 +51,12 @@ export default function Lobby({ me, lobbyState, emit }) {
       )}
 
       <p className="rules">
-        Cada jogador escolhe, à vez, uma palavra secreta de 5 letras para os outros
-        adivinharem, estilo Wordle/Termo. Ganhas pontos por adivinhar com poucas
-        tentativas, e quem escolhe a palavra ganha pontos extra se conseguir
-        dificultar a vida aos adversários.
+        Em cada ronda, todos escolhem ao mesmo tempo uma palavra secreta de 5
+        letras para o próximo jogador da roda adivinhar, e todos adivinham a
+        sua palavra em simultâneo, vendo o progresso uns dos outros ao vivo,
+        estilo Wordle/Termo. Ganhas pontos por adivinhar com poucas tentativas,
+        e quem escolheu a palavra ganha pontos extra se conseguir dificultar a
+        vida ao adversário.
       </p>
     </div>
   );
