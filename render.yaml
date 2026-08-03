@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: quina-discord
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: VITE_DISCORD_CLIENT_ID
+        sync: false

@@ -133,9 +133,48 @@ npm start       # arranca o server, que serve a API + Socket.IO + client/dist
 
 Podes hospedar isto em qualquer plataforma que corra um processo Node
 persistente com WebSockets (por exemplo Fly.io, Render, Railway, ou uma VM
-normal). Depois de teres um domínio HTTPS estável, atualiza o **URL Mapping**
-no Discord Developer Portal para apontar para esse domínio — a partir daí a
-Activity está pronta a usar-se em qualquer chamada de grupo do Discord.
+normal). **Netlify não serve** — é hosting de sites estáticos/funções sem
+estado, e este projeto precisa de um processo Node persistente (para manter o
+WebSocket do Socket.IO ligado e o endpoint `/api/token` com o client secret).
+Depois de teres um domínio HTTPS estável, atualiza o **URL Mapping** no
+Discord Developer Portal para apontar para esse domínio — a partir daí a
+Activity está pronta a usar-se em qualquer chamada de grupo do Discord, sem
+precisares de túneis nem de mudar o link outra vez.
+
+### Deploy no Render (recomendado, gratuito para começar)
+
+O repositório já inclui um `render.yaml` (Blueprint) que configura tudo
+automaticamente:
+
+1. Garante que o código está num repositório GitHub (o Render liga-se
+   diretamente ao GitHub).
+2. Cria conta em https://render.com e liga a tua conta GitHub.
+3. **New +** → **Blueprint** → escolhe este repositório. O Render deteta o
+   `render.yaml` e propõe criar o serviço `quina-discord` automaticamente
+   (comando de build `npm install && npm run build`, comando de arranque
+   `npm start`).
+4. Antes de confirmares o deploy, preenche as 3 variáveis de ambiente pedidas
+   (o `render.yaml` marca-as como secretas, por isso tens de as inserir
+   manualmente no dashboard):
+   - `DISCORD_CLIENT_ID` e `VITE_DISCORD_CLIENT_ID` — o Application ID da tua
+     app no Discord Developer Portal (o mesmo valor nas duas).
+   - `DISCORD_CLIENT_SECRET` — o Client Secret da aba OAuth2.
+5. Cria o serviço. Ao fim do primeiro deploy tens um URL fixo tipo
+   `https://quina-discord.onrender.com` — usa-o no **URL Mapping** das
+   Activities no Discord Developer Portal.
+6. Volta a fazer deploy sempre que fizeres `git push` para o branch ligado ao
+   Render (o próprio Render faz isso automaticamente a cada push).
+
+Duas notas importantes sobre o plano gratuito do Render:
+- **"Adormece" com inatividade**: sem pedidos há uns minutos, o serviço
+  hiberna e demora ~30-60s a "acordar" no pedido seguinte — o primeiro amigo a
+  abrir a Activity depois de uma pausa pode ver um ecrã em branco por um
+  bocado antes de carregar. Isto desaparece no plano pago (Starter).
+- **Disco não persistente**: o ficheiro de XP dos jogadores
+  (`server/src/data/players.json`) vive dentro do próprio serviço, e o plano
+  gratuito não tem disco persistente — cada novo deploy (`git push`) reinicia
+  o XP de todos a zero. Se isto for importante, considera o Fly.io (tem
+  volumes persistentes gratuitos) ou o disco persistente pago do Render.
 
 ## Notas técnicas
 
