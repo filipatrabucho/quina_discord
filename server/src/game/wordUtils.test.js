@@ -15,6 +15,16 @@ test('isValidWord accepts real dictionary words regardless of accents/case', () 
   assert.equal(isValidWord('ab', 'en'), false);
 });
 
+test('isValidWord accepts common Portuguese conjugated verb forms', () => {
+  // Regression test: the first PT word list (a raw aspell dump) was missing
+  // almost every conjugated verb, e.g. 'casou' ("ele/ela casou"). The list
+  // now comes from expanding a Hunspell dic+aff pair through its affix
+  // rules, which generates these forms properly.
+  for (const word of ['casou', 'morou', 'ficou', 'parou', 'jogou', 'comeu', 'bebeu', 'falou', 'ligou', 'levou']) {
+    assert.equal(isValidWord(word, 'pt'), true, `expected "${word}" to be a valid PT word`);
+  }
+});
+
 test('computeFeedback marks correct/present/absent like Wordle', () => {
   const feedback = computeFeedback('apple', 'plate');
   const statuses = feedback.map((f) => f.status);
