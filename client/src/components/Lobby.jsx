@@ -1,4 +1,6 @@
-export default function Lobby({ me, lobbyState, emit }) {
+import { useState } from 'react';
+
+export default function Lobby({ me, lobbyState, roomId, isWeb, emit }) {
   const isHost = me.id === lobbyState.hostId;
   const connectedCount = lobbyState.players.filter((p) => p.connected).length;
   const canStart = connectedCount >= 2;
@@ -6,6 +8,9 @@ export default function Lobby({ me, lobbyState, emit }) {
   return (
     <div className="panel">
       <h2>Sala de espera</h2>
+
+      {isWeb && roomId && <InviteLink roomId={roomId} />}
+
       <ul className="player-list">
         {lobbyState.players.map((p) => (
           <li key={p.id} className={p.connected ? '' : 'disconnected'}>
@@ -58,6 +63,33 @@ export default function Lobby({ me, lobbyState, emit }) {
         e quem escolheu a palavra ganha pontos extra se conseguir dificultar a
         vida ao adversário.
       </p>
+    </div>
+  );
+}
+
+function InviteLink({ roomId }) {
+  const [copied, setCopied] = useState(false);
+  const link = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt('Copia o link do convite:', link);
+    }
+  }
+
+  return (
+    <div className="invite-box">
+      <div>
+        <span className="invite-label">Convida um amigo</span>
+        <span className="invite-code">Código: {roomId}</span>
+      </div>
+      <button type="button" onClick={copyLink}>
+        {copied ? 'Copiado!' : 'Copiar link'}
+      </button>
     </div>
   );
 }

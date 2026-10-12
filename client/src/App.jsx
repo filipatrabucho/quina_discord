@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSocket } from './socket.js';
 import { isRunningInsideDiscord, setupDiscordSdk } from './discordSdk.js';
-import LocalDevJoin from './components/LocalDevJoin.jsx';
+import WebJoin from './components/WebJoin.jsx';
 import Lobby from './components/Lobby.jsx';
 import ChooseWord from './components/ChooseWord.jsx';
 import GuessScreen from './components/GuessScreen.jsx';
@@ -11,9 +11,10 @@ import ErrorBanner from './components/ErrorBanner.jsx';
 import ProfileHeader from './components/ProfileHeader.jsx';
 
 export default function App() {
-  const [status, setStatus] = useState('connecting'); // connecting | needsLocalJoin | joined | error
+  const [status, setStatus] = useState('connecting'); // connecting | needsWebJoin | joined | error
   const [errorMessage, setErrorMessage] = useState(null);
   const [me, setMe] = useState(null);
+  const [roomId, setRoomId] = useState(null);
   const [lobbyState, setLobbyState] = useState(null);
   const [roundInfo, setRoundInfo] = useState(null);
   const [choosingProgress, setChoosingProgress] = useState(null);
@@ -28,6 +29,7 @@ export default function App() {
 
   const joinRoom = useCallback((user, room) => {
     setMe(user);
+    setRoomId(room);
     const socket = getSocket();
     socketRef.current = socket;
 
@@ -103,7 +105,7 @@ export default function App() {
           }
         }
       } else {
-        setStatus('needsLocalJoin');
+        setStatus('needsWebJoin');
       }
     }
 
@@ -123,9 +125,9 @@ export default function App() {
     return <CenteredMessage title="Quina" subtitle="A ligar..." />;
   }
 
-  if (status === 'needsLocalJoin') {
+  if (status === 'needsWebJoin') {
     return (
-      <LocalDevJoin
+      <WebJoin
         onJoin={(user, room) => {
           setStatus('connecting');
           joinRoom(user, room);
@@ -167,7 +169,7 @@ export default function App() {
 
       <main className="app-main">
         {lobbyState.phase === 'lobby' && (
-          <Lobby me={me} lobbyState={lobbyState} emit={emit} />
+          <Lobby me={me} lobbyState={lobbyState} roomId={roomId} isWeb={!isRunningInsideDiscord()} emit={emit} />
         )}
 
         {lobbyState.phase === 'choosing' && roundInfo && (

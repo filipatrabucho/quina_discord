@@ -1,12 +1,14 @@
 # Quina — descobre a palavra
 
-Um jogo multiplayer estilo Wordle/Termo para jogar dentro de uma chamada de
-grupo do Discord (Discord Activity). Em vez de uma palavra aleatória, **todos
-os jogadores escolhem, ao mesmo tempo, uma palavra secreta de 5 letras** para
-o jogador seguinte na roda adivinhar — e depois todos adivinham a sua palavra
-em simultâneo, vendo o progresso uns dos outros ao vivo. Os pontos acumulam-se
-ronda a ronda (com rotação da atribuição de pares a cada ronda), e cada
-jogador tem um perfil com XP e nível que persiste entre partidas.
+Um jogo multiplayer estilo Wordle/Termo, jogável de duas formas: como
+**Discord Activity** dentro de uma chamada de grupo, ou como **página web
+simples** (1 vs 1 ou em grupo, por link de convite, sem precisar do Discord).
+Em vez de uma palavra aleatória, **todos os jogadores escolhem, ao mesmo
+tempo, uma palavra secreta de 5 letras** para o jogador seguinte na roda
+adivinhar — e depois todos adivinham a sua palavra em simultâneo, vendo o
+progresso uns dos outros ao vivo. Os pontos acumulam-se ronda a ronda (com
+rotação da atribuição de pares a cada ronda), e cada jogador tem um perfil
+com XP e nível que persiste entre partidas.
 
 ## Estrutura do projeto
 
@@ -57,7 +59,17 @@ sítio para teres a Activity completa.
 npm install   # instala as dependências do client e do server (npm workspaces)
 ```
 
-## Testar sem o Discord (modo de desenvolvimento local)
+## Jogar via browser, sem o Discord (modo web 1 vs 1)
+
+Fora do Discord, a mesma app serve uma versão web simples: qualquer pessoa
+abre o URL do servidor (local ou em produção, ex. `https://quina-discord.onrender.com`),
+escolhe um nome e clica em **"Criar sala e convidar um amigo"**. Isso gera um
+link com o código da sala embutido (`?room=XXXXX`) que dá para copiar e
+enviar diretamente — quem abre o link já entra com o código pré-preenchido,
+só precisa de escrever o nome. Dá para jogar 1 vs 1, ou partilhar o mesmo
+link com mais pessoas para jogar em grupo.
+
+## Testar localmente sem o Discord (desenvolvimento)
 
 Para testar a lógica do jogo rapidamente, sem precisar de configurar nada no
 Discord:
@@ -67,9 +79,9 @@ npm run dev:server   # arranca o backend em http://localhost:3001
 npm run dev:client   # noutro terminal: arranca o Vite em http://localhost:5173
 ```
 
-Abre `http://localhost:5173` em duas abas (ou dois browsers) diferentes,
-entra com o mesmo "código da sala" em ambas para simular dois jogadores, e
-joga normalmente. Fora do Discord a app entra automaticamente neste modo
+Abre `http://localhost:5173`, cria uma sala numa aba e usa o link de convite
+(ou o código manualmente) para entrar noutra aba/browser e simular um
+segundo jogador. Fora do Discord a app entra automaticamente neste modo web
 (deteta que não está dentro do iframe da Activity).
 
 Também há testes automáticos à lógica do jogo (validação de palavras, cálculo
